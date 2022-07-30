@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import time
 import pickle as pkl
@@ -9,7 +10,7 @@ class HMERDataset(Dataset):
         super(HMERDataset, self).__init__()
         if image_path.endswith('.pkl'):
             with open(image_path, 'rb') as f:
-                self.images = pkl.load(f)
+                self.images = pkl.load(f)  # 每个图片的维度是[H, W], 不是彩色的
         elif image_path.endswith('.list'):
             with open(image_path, 'r') as f:
                 lines = f.readlines()
@@ -40,6 +41,8 @@ class HMERDataset(Dataset):
         name = name.split('.')[0] if name.endswith('jpg') else name
         image = self.images[name]
         image = torch.Tensor(255-image) / 255
+        # 如果形状是3，说明有channel维度，我们去掉它
+        assert len(image.shape) == 2, "图像的维度应该只有高和宽"
         image = image.unsqueeze(0)
         labels.append('eos')
         words = self.words.encode(labels)

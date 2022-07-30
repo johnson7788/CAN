@@ -20,8 +20,8 @@ if not args.dataset:
     print('请提供数据集名称')
     exit(-1)
 
-if args.dataset == 'CROHME':
-    config_file = 'config.yaml'
+
+config_file = f'config_{args.dataset}.yaml'
 
 """加载config文件"""
 params = load_config(config_file)
@@ -35,15 +35,17 @@ torch.cuda.manual_seed(params['seed'])
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 params['device'] = device
-
+# 加载数据集
 if args.dataset == 'CROHME':
+    train_loader, eval_loader = get_crohme_dataset(params, use_aug=True)
+elif args.dataset == 'IM2LATEX':
     train_loader, eval_loader = get_crohme_dataset(params, use_aug=True)
 
 model = CAN(params)
 now = time.strftime("%Y-%m-%d-%H-%M", time.localtime())
 model.name = f'{params["experiment"]}_{now}_decoder-{params["decoder"]["net"]}'
 
-print(model.name)
+print(f"模型的名称是: {model.name}")
 model = model.to(device)
 
 if args.check:
@@ -65,7 +67,7 @@ if not args.check:
     os.system(f'cp {config_file} {os.path.join(params["checkpoint_dir"], model.name, model.name)}.yaml')
 
 """在CROHME上训练"""
-if args.dataset == 'CROHME':
+if args.dataset == 'CROHME' or args.dataset == 'IM2LATEX':
     min_score1, init_epoch = 0, 0
 
     for epoch in range(init_epoch, params['epochs']):

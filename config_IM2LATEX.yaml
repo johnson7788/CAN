@@ -30,13 +30,14 @@ gradient_clip: True
 use_label_mask: False
 
 # 训练数据
-train_image_path: 'datasets/CROHME/train_images.pkl'
-train_label_path: 'datasets/CROHME/train_labels.txt'
+train_image_path: 'datasets/IM2LATEX/train_images.pkl'
+train_label_path: 'datasets/IM2LATEX/train_labels.txt'
 
-eval_image_path: 'datasets/CROHME/14_test_images.pkl'
-eval_label_path: 'datasets/CROHME/14_test_labels.txt'
+eval_image_path: 'datasets/IM2LATEX/val_images.pkl'
+eval_label_path: 'datasets/IM2LATEX/val_labels.txt'
 
-word_path: 'datasets/CROHME/words_dict.txt'
+word_path: 'datasets/IM2LATEX/words_dict.txt'
+
 
 # collate_fn
 collate_fn: collate_fn
@@ -60,7 +61,7 @@ decoder:
 
 counting_decoder:
   in_channel: 684
-  out_channel: 111
+  out_channel: 492   # 要和字典vocab的长度保持一致
 
 attention:
   attention_dim: 512
