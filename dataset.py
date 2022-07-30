@@ -53,6 +53,7 @@ class HMERDataset(Dataset):
 def get_crohme_dataset(params, use_aug):
     words = Words(params['word_path'])
     params['word_num'] = len(words)
+    assert len(words) == params["counting_decoder"]["out_channel"], f"注意单词表的长度需要和解码器的输出长度一致"
     print(f"训练数据路径 images: {params['train_image_path']} labels: {params['train_label_path']}")
     print(f"验证数据路径 images: {params['eval_image_path']} labels: {params['eval_label_path']}")
 
