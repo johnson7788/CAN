@@ -61,7 +61,7 @@ decoder:
 
 counting_decoder:
   in_channel: 684
-  out_channel: 492   # 要和字典vocab的长度保持一致
+  out_channel: 574   # 要和字典vocab的长度保持一致
 
 attention:
   attention_dim: 512
