@@ -22,6 +22,7 @@ if not args.dataset:
 
 
 config_file = f'config_{args.dataset}.yaml'
+assert os.path.exists(config_file), f"{config_file}不存在,请检查"
 
 """加载config文件"""
 params = load_config(config_file)

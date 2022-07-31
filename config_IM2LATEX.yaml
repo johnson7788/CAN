@@ -76,5 +76,5 @@ max_step: 256
 optimizer_save: False
 finetune: False
 checkpoint_dir: 'checkpoints'
-checkpoint: ""
+checkpoint: "checkpoints/CAN_2022-07-30-19-44_decoder-AttDecoder_WordRate-0.9220_ExpRate-0.3373_13.pth"
 log_dir: 'logs'

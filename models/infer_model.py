@@ -71,6 +71,17 @@ class Inference(nn.Module):
                     cv2.imwrite(os.path.join(self.params['counting_map_vis_path'], name, img_name), counting_heatmap)
 
         return word_probs, word_alphas, mae, mse
+    def predict(self, images, is_train=False):
+        cnn_features = self.encoder(images)
+        batch_size, _, height, width = cnn_features.shape
+        counting_preds1, counting_maps1 = self.counting_decoder1(cnn_features, None)
+        counting_preds2, counting_maps2 = self.counting_decoder2(cnn_features, None)
+        counting_preds = (counting_preds1 + counting_preds2) / 2
+        counting_maps = (counting_maps1 + counting_maps2) / 2
+
+        word_probs, word_alphas = self.decoder(cnn_features, counting_preds, is_train=is_train)
+
+        return word_probs, word_alphas
 
 
 class AttDecoder(nn.Module):

@@ -14,10 +14,6 @@ from counting_utils import gen_counting_label
 
 parser = argparse.ArgumentParser(description='model testing')
 parser.add_argument('--dataset', default='CROHME', type=str, help='数据集名称')
-parser.add_argument('--image_path', default='datasets/CROHME/14_test_images.pkl', type=str, help='测试image路径')
-parser.add_argument('--label_path', default='datasets/CROHME/14_test_labels.txt', type=str, help='测试label路径')
-parser.add_argument('--word_path', default='datasets/CROHME/words_dict.txt', type=str, help='测试dict路径')
-
 parser.add_argument('--draw_map', default=False)
 args = parser.parse_args()
 
@@ -26,7 +22,16 @@ if not args.dataset:
     exit(-1)
 
 if args.dataset == 'CROHME':
-    config_file = 'config.yaml'
+    args.image_path = 'datasets/CROHME/14_test_images.pkl'
+    args.label_path = 'datasets/CROHME/14_test_labels.txt'
+    args.word_path = 'datasets/CROHME/words_dict.txt'
+elif args.dataset == 'IM2LATEX':
+    args.image_path = 'datasets/IM2LATEX/test_images.pkl'
+    args.label_path = 'datasets/IM2LATEX/test_labels.txt'
+    args.word_path = 'datasets/IM2LATEX/words_dict.txt'
+
+config_file = f'config_{args.dataset}.yaml'
+assert os.path.exists(config_file), f"{config_file}不存在,请检查"
 
 """加载config文件"""
 params = load_config(config_file)
@@ -87,7 +92,9 @@ with torch.no_grad():
                 'label': labels,
                 'predi': prediction
             }
-            print(name, prediction, labels)
+            print(f"图片的名字是: {name}")
+            print(f"预测的结果是: {prediction}")
+            print(f"真实的latex结果是: {labels}")
 
         distance = compute_edit_distance(prediction, labels)
         if distance <= 1:
