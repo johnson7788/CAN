@@ -11,8 +11,7 @@
 import re
 import sys
 import json
-import pickle as pkl
-from tqdm import tqdm
+import hashlib
 import os
 import time
 import logging
@@ -21,6 +20,7 @@ import requests
 import cv2
 import torch
 from numpy import random
+import base64
 from flask import Flask, request, jsonify, abort
 from utils import load_config, load_checkpoint, compute_edit_distance
 from models.infer_model import Inference
@@ -50,6 +50,9 @@ class LatexModel(object):
         self.draw_map = False
         self.load_predict_model()
         self.line_right = 0
+        self.upload_dir = 'runs/api/uploads/'
+        if not os.path.exists(self.upload_dir):
+            os.makedirs(self.upload_dir)
 
     def load_predict_model(self):
         # Load model
@@ -59,22 +62,42 @@ class LatexModel(object):
         self.model.eval()
         logger.info(f"预测模型加载完成")
 
-    def download_file(sefl, url, save_dir):
+    def cal_md5(self,content):
         """
-        我们返回绝对路径
-        :param url: eg: http://127.0.0.1:9090/2007.158710001-01.jpg
-        :param save_dir: eg: /tmp/
-        :return:  /tmp/2007.158710001-01.jpg
+        计算content字符串的md5
+        :param content:
+        :return:
         """
-        local_filename = url.split('/')[-1]
-        save_dir_abs = Path(save_dir).absolute()
-        save_file = os.path.join(save_dir_abs, local_filename)
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(save_file, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-        return save_file
+        # 使用encode
+        result = hashlib.md5(content.encode())
+        # 打印hash
+        md5 = result.hexdigest()
+        return md5
+    def download(self, image_url, image_path_name, force_download=False):
+        """
+        根据提供的图片的image_url，下载图片保存到image_path_name
+        :param: force_download: 是否强制下载
+        :return_exists: 是否图片已经存在，如果已经存在，那么返回2个True
+        """
+        # 如果存在图片，并且不强制下载，那么直接返回
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.132 Safari/537.36"
+        }
+        if os.path.exists(image_path_name) and not force_download:
+            print(f"{image_path_name}图片已存在，不需要下载")
+            return True
+        try:
+            response = requests.get(image_url, stream=True, headers=headers)
+            with open(image_path_name, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+            return True
+        except Exception as e:
+            print(f"{image_url}下载失败")
+            print(f"{e}")
+            return False
     def predict(self, image_name):
         with torch.no_grad():
             image_array = cv2.imread(image_name, cv2.IMREAD_GRAYSCALE)
@@ -102,6 +125,42 @@ class LatexModel(object):
             results = {"code": 200, "msg": "success", "data": prediction}
         else:
             results = {"code": 400, "msg": "给定的图片不存在", "data": ""}
+        return results
+    def predict_url(self, url):
+        """
+        :param data: 一个图片的url，下载后预测
+        :return: [[images, bboxes, confidences, labels],[images, bboxes,confidences, labels],...] bboxes是所有的bboxes, confidence是置信度， labels是所有的bboxes对应的label，
+        """
+        #检查图片确实存在
+        logger.info(f"预测本地的一个的图片的url地址")
+        image_suffix = url.split('.')[-1]
+        md5 = self.cal_md5(url)
+        new_image_name = md5 + '.' + image_suffix
+        image_path = os.path.join(self.upload_dir, new_image_name)
+        download_reuslt = self.download(image_url=url, image_path_name=image_path)
+        if download_reuslt:
+            prediction = self.predict(image_path)
+            results = {"code": 200, "msg": "success", "data": prediction}
+        else:
+            results = {"code": 400, "msg": "图片下载失败，请检查图片地址是否正确", "data": ""}
+        return results
+    def predict_raw_image(self, raw_file, image_name=None):
+        """
+        :param raw_file: 图片的base64 str 格式
+        :return:
+        """
+        #检查图片确实存在
+        logger.info(f"预测本地的一个base64 str的图片")
+        raw_str = raw_file.encode('utf-8')
+        raw_img = base64.b64decode(raw_str)
+        if image_name:
+            img_name = os.path.join(self.upload_dir, image_name)
+        else:
+            img_name = os.path.join(self.upload_dir, 'tmp.jpg')
+        with open(img_name, 'wb') as f:
+            f.write(raw_img)
+        prediction = self.predict(img_name)
+        results = {"code": 200, "msg": "success", "data": prediction}
         return results
 
     def predict_directory(self,directory_path):
@@ -137,6 +196,11 @@ def predict():
         results = latex_model.predict_image(image_path=test_data)
     elif file_format == "directory":
         results = latex_model.predict_directory(directory_path=test_data)
+    elif file_format == "base64":
+        image_name = jsonres.get('name')
+        results = latex_model.predict_raw_image(raw_file=test_data, image_name=image_name)
+    elif file_format == "url":
+        results = latex_model.predict_url(url=test_data)
     logger.info(f"预测的结果是:{results}")
     return jsonify(results)
 
